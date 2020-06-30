@@ -2,21 +2,26 @@ package session
 
 import (
 	"database/sql"
+	"gingle-orm/dialect"
 	"gingle-orm/log"
+	"gingle-orm/schema"
 	"strings"
 )
 
 // Session is related to sql execution or sql query
 type Session struct {
 	db        *sql.DB
+	dialect   dialect.Dialect
+	schema    *schema.Schema
 	sqlClause strings.Builder
 	sqlVars   []interface{}
 }
 
 // New is to return a Session instance
-func New(db *sql.DB) *Session {
+func New(db *sql.DB, dialect dialect.Dialect) *Session {
 	return &Session{
-		db: db,
+		db:      db,
+		dialect: dialect,
 	}
 }
 
