@@ -13,6 +13,7 @@ func (s *Session) Insert(values ...interface{}) (int64, error) {
 
 	// TODO: confused :(
 	for _, value := range values {
+		s.CallMethod(BeforeInsert, value)
 		table := s.Model(value).Schema()
 		s.clause.Set(clause.INSERT, table.Name, table.FieldNames)
 		recordValues = append(recordValues, table.RecordValues(value))
@@ -26,11 +27,13 @@ func (s *Session) Insert(values ...interface{}) (int64, error) {
 		log.Errorln(err)
 		return 0, err
 	}
+	s.CallMethod(AfterInsert, nil)
 	return res.RowsAffected()
 }
 
 // Find is to select records from database
 func (s *Session) Find(values interface{}) error {
+	s.CallMethod(BeforeQuery, nil)
 	modSlice := reflect.Indirect(reflect.ValueOf(values))
 	modType := modSlice.Type().Elem()
 	table := s.Model(reflect.New(modType).Elem().Interface()).Schema()
@@ -52,6 +55,7 @@ func (s *Session) Find(values interface{}) error {
 			return err
 		}
 
+		s.CallMethod(AfterQuery, mod.Addr().Interface())
 		// TODO: confused :(
 		modSlice.Set(reflect.Append(modSlice, mod))
 	}
@@ -100,6 +104,7 @@ func (s *Session) OrderBy(order string) *Session {
 
 // Update is to update records in database
 func (s *Session) Update(kvpair ...interface{}) (int64, error) {
+	s.CallMethod(BeforeUpdate, nil)
 	m, ok := kvpair[0].(map[string]interface{})
 	if !ok {
 		m = make(map[string]interface{})
@@ -117,11 +122,13 @@ func (s *Session) Update(kvpair ...interface{}) (int64, error) {
 		log.Errorln(err)
 		return 0, err
 	}
+	s.CallMethod(AfterUpdate, nil)
 	return res.RowsAffected()
 }
 
 // Delete is to delete records in database
 func (s *Session) Delete() (int64, error) {
+	s.CallMethod(BeforeDelete, nil)
 	s.clause.Set(clause.DELETE, s.Schema().Name)
 
 	sqlClause, sqlVars := s.clause.Build(clause.DELETE, clause.WHERE)
@@ -131,6 +138,7 @@ func (s *Session) Delete() (int64, error) {
 		log.Errorln(err)
 		return 0, err
 	}
+	s.CallMethod(AfterDelete, nil)
 	return res.RowsAffected()
 }
 
