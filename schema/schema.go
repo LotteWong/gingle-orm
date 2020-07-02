@@ -33,6 +33,18 @@ func (s *Schema) GetField(name string) (field *Field, ok bool) {
 	return
 }
 
+// RecordValues is to convert go values to sql values
+func (s *Schema) RecordValues(mod interface{}) []interface{} {
+	modelValue := reflect.Indirect(reflect.ValueOf(mod))
+
+	var fieldValues []interface{}
+	for _, field := range s.Fields {
+		fieldValues = append(fieldValues, modelValue.FieldByName(field.Name).Interface())
+	}
+
+	return fieldValues
+}
+
 // Parse is to do object relation mapping
 func Parse(mod interface{}, dial dialect.Dialect) *Schema {
 	modelType := reflect.Indirect(reflect.ValueOf(mod)).Type()

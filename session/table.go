@@ -57,7 +57,7 @@ func (s *Session) ExistTable() (exist bool) {
 	table := s.Schema()
 	sqlClause, sqlVars := s.dialect.TableExistSQL(table.Name)
 	row := s.Raw(sqlClause, sqlVars...).QueryRow()
-	tableName := ""
+	var tableName string
 	row.Scan(&tableName)
 	return tableName == table.Name
 }

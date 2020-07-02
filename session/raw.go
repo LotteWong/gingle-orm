@@ -2,6 +2,7 @@ package session
 
 import (
 	"database/sql"
+	"gingle-orm/clause"
 	"gingle-orm/dialect"
 	"gingle-orm/log"
 	"gingle-orm/schema"
@@ -13,6 +14,7 @@ type Session struct {
 	db        *sql.DB
 	dialect   dialect.Dialect
 	schema    *schema.Schema
+	clause    clause.Clause
 	sqlClause strings.Builder
 	sqlVars   []interface{}
 }
@@ -42,6 +44,7 @@ func (s *Session) Raw(sql string, values ...interface{}) *Session {
 func (s *Session) Clear() {
 	s.sqlClause.Reset()
 	s.sqlVars = nil
+	s.clause = clause.Clause{}
 }
 
 // Exec raw sql clause with sql variables
