@@ -40,7 +40,11 @@ func (s *Session) Find(values interface{}) error {
 
 	s.clause.Set(clause.SELECT, table.Name, table.FieldNames)
 	sqlClause, sqlVars := s.clause.Build(clause.SELECT, clause.WHERE, clause.ORDERBY, clause.LIMIT)
-	rows := s.Raw(sqlClause, sqlVars...).QueryRows()
+	rows, err := s.Raw(sqlClause, sqlVars...).Query()
+	if err != nil {
+		log.Errorln(err)
+		return err
+	}
 
 	for rows.Next() {
 		mod := reflect.New(modType).Elem()
@@ -49,7 +53,7 @@ func (s *Session) Find(values interface{}) error {
 			values = append(values, mod.FieldByName(name).Addr().Interface())
 		}
 
-		err := rows.Scan(values...)
+		err = rows.Scan(values...)
 		if err != nil {
 			log.Errorln(err)
 			return err

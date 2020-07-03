@@ -12,6 +12,7 @@ import (
 // Session is related to sql execution or sql query
 type Session struct {
 	db        *sql.DB
+	tx        *sql.Tx
 	dialect   dialect.Dialect
 	schema    *schema.Schema
 	clause    clause.Clause
@@ -27,8 +28,22 @@ func New(db *sql.DB, dialect dialect.Dialect) *Session {
 	}
 }
 
+// CommonDB is a minimal function set of db
+type CommonDB interface {
+	Exec(sqlClause string, sqlVars ...interface{}) (sql.Result, error)
+	QueryRow(sqlClause string, sqlVars ...interface{}) *sql.Row
+	Query(sqlClause string, sqlVars ...interface{}) (*sql.Rows, error)
+}
+
+// Check type conversion statically
+var _ CommonDB = (*sql.DB)(nil)
+var _ CommonDB = (*sql.Tx)(nil)
+
 // DB is to return a database instance
-func (s *Session) DB() *sql.DB {
+func (s *Session) DB() CommonDB {
+	if s.tx != nil {
+		return s.tx
+	}
 	return s.db
 }
 
@@ -68,11 +83,14 @@ func (s *Session) QueryRow() *sql.Row {
 	return row
 }
 
-// QueryRows retrieves a list of records from database
-func (s *Session) QueryRows() *sql.Rows {
+// Query retrieves a list of records from database
+func (s *Session) Query() (rows *sql.Rows, err error) {
 	defer s.Clear()
 	log.Infoln(s.sqlClause, s.sqlVars)
 
-	rows, _ := s.DB().Query(s.sqlClause.String(), s.sqlVars...)
-	return rows
+	if rows, err = s.DB().Query(s.sqlClause.String(), s.sqlVars...); err != nil {
+		log.Errorln(err)
+	}
+
+	return
 }

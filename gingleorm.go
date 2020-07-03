@@ -60,3 +60,34 @@ func (e *Engine) Close() (err error) {
 func (e *Engine) NewSession() *session.Session {
 	return session.New(e.db, e.dialect)
 }
+
+// TxFunc is to callback session
+type TxFunc func(*session.Session) (interface{}, error)
+
+// Transaction is to wrap session with transaction
+func (e *Engine) Transaction(f TxFunc) (res interface{}, err error) {
+	s := e.NewSession()
+
+	// Transaction begins
+	if err = s.Begin(); err != nil {
+		log.Errorln(err)
+		return nil, err
+	}
+
+	// Transaction commits or rollbacks
+	defer func() {
+		if p := recover(); p != nil {
+			err = s.Rollback()
+			log.Errorln(err)
+			panic(p)
+		} else if err != nil {
+			err = s.Rollback()
+			log.Errorln(err)
+		} else {
+			err = s.Commit()
+			log.Errorln(err)
+		}
+	}()
+
+	return f(s)
+}
