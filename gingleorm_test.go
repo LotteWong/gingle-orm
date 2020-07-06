@@ -1,8 +1,8 @@
 package gingleorm
 
 import (
-	"errors"
 	"gingle-orm/session"
+	"reflect"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,7 +19,7 @@ func OpenDB(t *testing.T) *Engine {
 
 type User struct {
 	Name string `gingleorm:"PRIMARY KEY"`
-	Age int
+	Age  int
 }
 
 func transactionRollback(t *testing.T) {
@@ -28,7 +28,7 @@ func transactionRollback(t *testing.T) {
 
 	s := e.NewSession()
 	_ = s.Model(&User{}).DropTable()
-	_, err := e.Transaction(func (s *session.Session) (res interface{}, err error) {
+	_, err := e.Transaction(func(s *session.Session) (res interface{}, err error) {
 		_ = s.Model(&User{}).CreateTable()
 		_, err = s.Insert(&User{"Tom", 18})
 		return nil, err
@@ -40,12 +40,12 @@ func transactionRollback(t *testing.T) {
 }
 
 func transactionCommit(t *testing.T) {
-	e := OpenDB()
+	e := OpenDB(t)
 	defer e.Close()
 
 	s := e.NewSession()
 	_ = s.Model(&User{}).DropTable()
-	_, err := e.Transaction(func (s *session.Session) (res interface{}, err error) {
+	_, err := e.Transaction(func(s *session.Session) (res interface{}, err error) {
 		_ = s.Model(&User{}).CreateTable()
 		_, err = s.Insert(&User{"Tom", 18})
 		return nil, err
@@ -68,7 +68,7 @@ func TestEngine_Transaction(t *testing.T) {
 }
 
 func TestEngine_Migrate(t *testing.T) {
-	e := OpenDB()
+	e := OpenDB(t)
 	defer e.Close()
 
 	s := e.NewSession()
@@ -79,7 +79,7 @@ func TestEngine_Migrate(t *testing.T) {
 
 	rows, _ := s.Raw("SELECT * FROM User").Query()
 	cols, _ := rows.Columns()
-	if !reflect.DeepEqual(columns, []string{"Name", "Age"}) {
+	if !reflect.DeepEqual(cols, []string{"Name", "Age"}) {
 		t.Fatal("Failed to migrate")
 	}
 }

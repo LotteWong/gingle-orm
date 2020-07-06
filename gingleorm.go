@@ -2,9 +2,11 @@ package gingleorm
 
 import (
 	"database/sql"
+	"fmt"
 	"gingle-orm/dialect"
 	"gingle-orm/log"
 	"gingle-orm/session"
+	"strings"
 )
 
 // Engine is related to database lifecycle
@@ -105,29 +107,30 @@ func difference(a []string, b []string) (diff []string) {
 	return
 }
 
+// Migrate is to live update database when fields add or delete
 func (e *Engine) Migrate(value interface{}) error {
-	_, err := e.Transaction(func (s *session.Session) (res interface{}, err error) {
-		if !s.Modle(value).ExistTable() {
+	_, err := e.Transaction(func(s *session.Session) (res interface{}, err error) {
+		if !s.Model(value).ExistTable() {
 			log.Infof("Table %s doesn't exist", s.Schema().Name)
-			return s.CreateTable()
+			return nil, s.CreateTable()
 		}
 
 		table := s.Schema()
-		rows, _ := s.Raw(fmt.Sprintf("SELETE * FROM %s LIMIT 1"， table.Name)).Query()
+		rows, _ := s.Raw(fmt.Sprintf("SELETE * FROM %s LIMIT 1", table.Name)).Query()
 		columns, _ := rows.Columns()
 		addCols := difference(table.FieldNames, columns)
 		delCols := difference(columns, table.FieldNames)
 		log.Infof("Added cols %v; Deleted cols %v", addCols, delCols)
 
 		for _, col := range addCols {
-			f := table.GetField(col)
+			f, _ := table.GetField(col)
 			if _, err = s.Raw(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table.Name, f.Name, f.Type)).Exec(); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
-		if len(delCols == 0) {
-			return nil
+		if len(delCols) == 0 {
+			return nil, nil
 		}
 		tmpTable := "tmp_" + table.Name
 		fieldStr := strings.Join(table.FieldNames, ", ")
@@ -135,7 +138,7 @@ func (e *Engine) Migrate(value interface{}) error {
 		s.Raw(fmt.Sprintf("Drop TABLE %s", table.Name))
 		s.Raw(fmt.Sprintf("ALTER TABLE %s RENAME TO %s", tmpTable, table.Name))
 		_, err = s.Exec()
-		return err
+		return nil, err
 	})
 
 	if err != nil {
